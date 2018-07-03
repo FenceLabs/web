@@ -1,28 +1,42 @@
 <template>
   <div id="app">
-    <img src="./assets/logo.png">
-    <HelloWorld/>
+    <input class='input' place-holder='输入真实姓名'></input>
+    <div class='white-line'></div>
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld'
 
 export default {
   name: 'App',
-  components: {
-    HelloWorld
+  data(){
+    return{
+
+    }
+  },
+  created(){
+    
+  },
+  methods:{
+
   }
 }
 </script>
 
 <style>
 #app {
-  font-family: 'Avenir', Helvetica, Arial, sans-serif;
+  font-family: 'PingFangSC-Regular', Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+  color: #fff;
+  background:rgb(12,12,12)
 }
+.input{
+
+}
+.white-line{
+  
+}
+
 </style>
