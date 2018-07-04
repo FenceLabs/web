@@ -1,12 +1,13 @@
 <template>
   <div id="app">
-    <input class='input' place-holder='输入真实姓名'></input>
+    <input class='input' place-holder='输入真实姓名'>
     <div class='white-line'></div>
+    <input type="file">
   </div>
 </template>
 
 <script>
-
+import request from 'ajax-request';
 export default {
   name: 'App',
   data(){
@@ -15,7 +16,18 @@ export default {
     }
   },
   created(){
-    
+    request({
+      url: '/live/sharePage',
+      method: 'GET',
+      data: {
+        
+      }
+    }, function(err, res, body) {
+      
+    });
+    // request('/live/sharePage', function(err, res, body) {
+
+    // });
   },
   methods:{
 
