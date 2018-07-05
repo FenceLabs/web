@@ -5,11 +5,11 @@ import App from './App'
 
 Vue.config.productionTip = false
 var w = window.screen.availWidth;
-var f = w/375*50;
-document.getElementsByTagName('html')[0].style.fontSize = f+'px';
+var f = w / 375 * 100;
+document.getElementsByTagName('html')[0].style.fontSize = f + 'px';
 /* eslint-disable no-new */
 new Vue({
-  el: '#app',
-  components: { App },
-  template: '<App/>'
+    el: '#app',
+    components: { App },
+    template: '<App/>'
 })
