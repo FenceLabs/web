@@ -1,6 +1,7 @@
 <template>
   <div id="app">
     <div v-if='unSubmit'>
+      <form action="" enctype="multipart/form-data">
       <div class="input-con">
         <input class='input' type="text" placeholder='输入真实姓名' v-model="userName">
         <div class='white-line'></div>
@@ -8,12 +9,13 @@
         <div class='white-line'></div>
       </div>
       <div class="upload-con">
-        <div class="before-upload">
+        <div v-if='!frontImgUrl' class="before-upload">
           <img class="add-con" src="./assets/upload.png" alt="">
           <img class="add-icon" src="./assets/group5.png" alt="">
           <p class="add-tip">上传手持身份证</p>
         </div>
-        <!-- <input class="input-file" type="file"> -->
+        <img v-else class='upload-img' :src="frontImgUrl" alt="">
+        <input class="input-file" @change="uploadImg($event,'front')" type="file" accept="image/png, image/jpeg, image/gif, image/jpg">
       </div>
       <div class="upload-example">
         <p class='title'>示例：</p>
@@ -22,12 +24,13 @@
         <p class="example-desc">请保证手持的身份证与填写的身份证信息一致</p>
       </div>
       <div class="upload-con">
-        <div class="before-upload">
+        <div v-if='!backImgUrl' class="before-upload">
           <img class="add-con" src="./assets/upload.png" alt="">
           <img class="add-icon" src="./assets/group5.png" alt="">
           <p class="add-tip">上传身份证背面</p>
         </div>
-        <!-- <input class="input-file" type="file"> -->
+        <img v-else class='upload-img' :src="backImgUrl" alt="">
+        <input class="input-file" @change="uploadImg($event,'back')" type="file" accept="image/png, image/jpeg, image/gif, image/jpg">
       </div>
       <div class="upload-example">
         <p class='title'>示例：</p>
@@ -35,12 +38,14 @@
         <p class="example-desc">身份证背面需清晰拍摄有效期限位置（图片大小不超过20M）</p>
         <p class="example-desc">身份证有效期需剩余一个月以上</p>
       </div>
-      <p v-if='acceptRule' class="submit-btn">提交</p>
+      <!-- <img :src="imgUrl" alt=""> -->
+      <p v-if='acceptRule' class="submit-btn" @click=submitForm>提交</p>
       <p v-else class="submit-btn-disabled">提交</p>
       <div class="tip">
         <img v-show='acceptRule' class="img-inner" src="./assets/ovalInside.png" alt="">
         <img class="img-outer" @click='changeState("acceptRule")' src="./assets/ovalOutside.png" alt="">
         我已阅读并同意<span class="yellow">《flow用户协议》</span></div>
+      </form>
     </div>
     <div v-else>
       <p class='submited-text'>提交成功，我们会尽快给出审核结果</p>
@@ -48,29 +53,25 @@
     </div>
   </div>
 </template>
-
 <script>
 import request from 'ajax-request';
+import oss from 'ali-oss';
 export default {
   name: 'App',
   data(){
     return{
-      unSubmit:false,
-      acceptRule:false,
+      unSubmit:true,
+      acceptRule:true,
       userName:'',
       cardId:'',
+      frontImgUrl:'',
+      backImgUrl:'',
+      frontImgId:'',
+      backImgId:'',
+      stsData:{},
     }
   },
   created(){
-    request({
-      url: 'live/sharePage',
-      method: 'GET',
-      data: {
-        starId:234
-      }
-    }, function(err, res, body) {
-      
-    });
     // request('/live/sharePage', function(err, res, body) {
 
     // });
@@ -79,13 +80,98 @@ export default {
     changeState(name){
       this[name] = !this[name];
     },
+    uploadImg(event,type){
+      var _this = this;
+      var result = {};
+      var storeAs = this.S4()+this.S4()+"-"+this.S4()+"-"+this.S4()+"-"+this.S4()+"-"+this.S4()+this.S4()+this.S4();   //文件名，随机生成唯一的uuid
+      var file = event.currentTarget.files[0];
+      request({     //从sts服务获取token，key等
+        url:'/token',
+        method: 'GET',
+        data: {}
+      },function(err, res, body){
+        if(err){
+          console.log(err);
+          return;
+        }
+        _this.stsData = JSON.parse(body);
+        result = _this.stsData;
+        console.log(result);
+        var client = new oss.Wrapper({
+            accessKeyId: result.AccessKeyId,
+            accessKeySecret: result.AccessKeySecret,
+            stsToken: result.SecurityToken,
+            endpoint: 'oss-cn-qingdao.aliyuncs.com',
+            // region: 'liveresource.flowsns.com',
+            bucket: 'flow-live-resource',
+            region:'oss-cn-qingdao'
+          });
+          client.multipartUpload(storeAs, file).then(function (result) {
+            console.log('upload result');
+            console.log(result);
+            var url = _this.getObjectURL(file);    //设置预览图片
+            _this[type+'ImgUrl'] = url;
+            _this[type+'ImgId'] = storeAs;
+          }).catch(function (err) {
+            console.log(err);
+          });
+      })
+    },
+    S4() {
+        return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
+    },
+    getUuid() {
+        return (this.S4()+this.S4()+"-"+this.S4()+"-"+this.S4()+"-"+this.S4()+"-"+this.S4()+this.S4()+this.S4());
+    },
     closeWindow(){
       
-    }
+    },
+    submitForm(){
+      var _this = this;
+      request({
+      url: '/live/sumbitAuthentication',
+      method: 'POST',
+      data: {
+        request:{
+          authentication: _this.queryString('authentication'),
+          backCardPhoto: _this.backImgId,
+          handCardPhoto: _this.frontImgId,
+          idNumber: _this.cardId,
+          realName: _this.userName,
+          userId: _this.queryString('userId')
+        }
+        
+      }
+    }, function(err, res, body) {
+      console.log('submit res')
+      console.log(res)
+    });
+    },
+    getObjectURL(file) {
+        var url = null ;
+        // 下面函数执行的效果是一样的，只是需要针对不同的浏览器执行不同的 js 函数而已
+        if (window.createObjectURL!=undefined) { // basic
+            url = window.createObjectURL(file) ;
+        } else if (window.URL!=undefined) { // mozilla(firefox)
+            url = window.URL.createObjectURL(file) ;
+        } else if (window.webkitURL!=undefined) { // webkit or chrome
+            url = window.webkitURL.createObjectURL(file) ;
+        }
+        return url ;
+    },
+    queryString(name, url) {
+                if (!url) url = window.location.href;
+                name = name.replace(/[\[\]]/g, "\\$&");
+                var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+                        results = regex.exec(url);
+                if (!results) return null;
+                if (!results[2]) return '';
+                return decodeURIComponent(results[2].replace(/\+/g, " "));
+    },
+
   }
 }
 </script>
-
 <style>
 #app {
   font-family: 'PingFangSC-Regular', Helvetica, Arial, sans-serif;
@@ -137,6 +223,7 @@ body{
 }
 .upload-con{
   margin-top: .32rem;
+  position: relative;
 }
 .before-upload{
   width: 100%;
@@ -145,7 +232,7 @@ body{
 .before-upload .add-con{
   position: relative;
   display: block;
-  width: 100%;
+  margin: 0 .16rem;
 }
 .before-upload .add-icon{
   display: block;
@@ -166,7 +253,20 @@ body{
   width: 100%;
 }
 .upload-con .input-file{
-
+    display: block;
+    width: 100%;
+    height: 1.5rem;
+    top: 0;
+    left: 0;
+    position: absolute;
+    opacity: 0;
+}
+.upload-con .upload-img{
+  display: block;
+  height: 1.5rem;
+  width: 2rem;
+  margin: 0 auto;
+  object-fit: cover;
 }
 .upload-example{
   margin-top: .16rem;
@@ -265,3 +365,4 @@ body{
   margin-top: .6rem;
 }
 </style>
+
