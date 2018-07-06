@@ -61,7 +61,7 @@ export default {
   data(){
     return{
       unSubmit:true,
-      acceptRule:true,
+      acceptRule:false,
       userName:'',
       cardId:'',
       frontImgUrl:'',
@@ -144,7 +144,10 @@ export default {
       }
     }, function(err, res, body) {
       console.log('submit res')
-      console.log(res)
+      console.log(res.statusCode)
+      if(res.statusCode==200){
+        _this.unSubmit = false;
+      }
     });
     },
     getObjectURL(file) {
